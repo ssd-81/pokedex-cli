@@ -19,24 +19,12 @@ func main() {
 		slice := strings.Split(cleanText, " ")
 		command := slice[0]
 		// fmt.Print("Your command was: ", slice[0])
-		if command == "exit" {
-			value, ok := repl.CliMap["exit"]
-			if ok {
-				if err := value.Callback(); err != nil {
-					fmt.Errorf("callback function failed")
-				}
-			} else {
-				fmt.Errorf("this command does not exist")
+		if cmd, exists := repl.CliMap[command]; exists {
+			if err := cmd.Callback(); err != nil {
+				fmt.Println("Error:", err)
 			}
-		}else if command == "help" {
-			value , ok := repl.CliMap["help"]
-			if ok {
-				if err := value.Callback(); err != nil {
-					fmt.Errorf("callback function failed")
-				}
-			} else {
-				fmt.Errorf("this command does not exist")
-			}
+		} else {
+			fmt.Println("Unknown command")
 		}
 	}
 
