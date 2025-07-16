@@ -18,6 +18,14 @@ func main() {
 		slice := strings.Split(cleanText, " ")
 		// fmt.Print("Your command was: ", slice[0])
 		if slice[0] == "exit" {
+			value, ok := repl.CliMap["exit"]
+			if ok {
+				if err := value.Callback(); err != nil {
+					fmt.Errorf("callback function failed")
+				}
+			} else {
+				fmt.Errorf("this command does not exist")
+			}
 			err := repl.CommandExit()
 			if err != nil {
 				fmt.Errorf("Error while exiting pokedex %")

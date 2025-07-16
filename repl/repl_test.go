@@ -29,7 +29,7 @@ func TestCleanInput(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		actual := cleanInput(strings.Join(strings.Fields(c.input), " ")) // returns a slice of strings
+		actual := CleanInput(strings.Join(strings.Fields(c.input), " ")) // returns a slice of strings
 
 		if len(actual) != len(c.expected) {
 			t.Errorf("length of actual and expected output is not equal; %d != %d", len(actual), len(c.expected))

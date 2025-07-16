@@ -7,17 +7,17 @@ import (
 )
 
 type CommandMap struct {
-	name	string
-	description string 
-	callback	func() error
+	Name	string
+	Description string 
+	Callback	func() error
 }
 
 // correct this structure 
-var cliMap = map[string]CommandMap {
+var CliMap = map[string]CommandMap {
 	"exit": {
-		name: "exit",
-		description: "Exit the Pokedex",
-		callback: CommandExit,
+		Name: "exit",
+		Description: "Exit the Pokedex",
+		Callback: CommandExit,
 	},
 }
 
