@@ -10,8 +10,8 @@ import (
 )
 
 type Config struct {
-	Next		string
-	Previous	string 
+	Next     string
+	Previous string
 }
 
 type CommandMap struct {
@@ -21,14 +21,13 @@ type CommandMap struct {
 }
 
 type ResultLocations struct {
-	Next		string `json:"next"`
-	Previous	string `json:"previous"`
-	Results []Location `json:"results"` 
+	Next     string     `json:"next"`
+	Previous string     `json:"previous"`
+	Results  []Location `json:"results"`
 }
 
-
 type Location struct {
-    Name    string `json:"name"`
+	Name string `json:"name"`
 }
 
 // correct this structure
@@ -49,9 +48,9 @@ var CliMap = map[string]CommandMap{
 		Callback:    MapCommand,
 	},
 	"mapb": {
-		Name:		"mapb",
+		Name:        "mapb",
 		Description: "display previous 20 location areas in Pokemon world",
-		Callback: 	MapBCommand,
+		Callback:    MapBCommand,
 	},
 }
 
@@ -98,14 +97,39 @@ func MapCommand(c *Config) error {
 	}
 	c.Next = locations.Next
 	c.Previous = locations.Previous
-	// fmt.Println(locations) // this is not what we need; we require the locations to be simply displayed
 	for _, loc := range locations.Results {
-		fmt.Println(loc)
+		fmt.Println(loc.Name)
 	}
 	return nil
 
 }
 
 func MapBCommand(c *Config) error {
-	return nil 
+	var prevCall string
+	if c.Previous != "" {
+		prevCall = c.Previous
+	} else {
+		fmt.Println("you're on the first page")
+		return nil 
+	}
+	resp, err := http.Get(prevCall)
+	if err != nil {
+		return fmt.Errorf("Error: ", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("Error: ", err)
+	}
+	var locations ResultLocations
+	err = json.Unmarshal(body, &locations)
+	if err != nil {
+		return fmt.Errorf("Error:", err)
+	}
+	c.Next = locations.Next
+	c.Previous = locations.Previous
+	for _, loc := range locations.Results {
+		fmt.Println(loc.Name)
+	}
+	return nil
 }
