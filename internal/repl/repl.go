@@ -97,31 +97,33 @@ func MapCommand(c *Config) error {
 		}
 		c.Cache.Add(c.Next, body)
 	} else {
+		var locations ResultLocations
+		locations, success = c.Cache.Get(c.Next)
 		fmt.Println("(from cache!)")
 	}
 
 	// above is implementing caching 
-	resp, err := http.Get(c.Next)
-	if err != nil {
-		return fmt.Errorf("Error: ", err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("Error: ", err)
-	}
-	var locations ResultLocations
-	err = json.Unmarshal(body, &locations)
-	if err != nil {
-		return fmt.Errorf("Error:", err)
-	}
-	c.Next = locations.Next
-	c.Previous = locations.Previous
-	c.Cache.Add()
-	for _, loc := range locations.Results {
-		fmt.Println(loc.Name)
-	}
-	return nil
+	// resp, err := http.Get(c.Next)
+	// if err != nil {
+	// 	return fmt.Errorf("Error: ", err)
+	// }
+	// defer resp.Body.Close()
+	// body, err := io.ReadAll(resp.Body)
+	// if err != nil {
+	// 	return fmt.Errorf("Error: ", err)
+	// }
+	// var locations ResultLocations
+	// err = json.Unmarshal(body, &locations)
+	// if err != nil {
+	// 	return fmt.Errorf("Error:", err)
+	// }
+	// c.Next = locations.Next
+	// c.Previous = locations.Previous
+	// c.Cache.Add()
+	// for _, loc := range locations.Results {
+	// 	fmt.Println(loc.Name)
+	// }
+	// return nil
 
 }
 
