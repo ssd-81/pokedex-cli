@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/ssd-81/pokedex-cli/repl"
+	"github.com/ssd-81/pokedex-cli/internal/repl"
+	"github.com/ssd-81/pokedex-cli/internal/pokecache"
 )
 
 func main() {
@@ -15,6 +15,7 @@ func main() {
 	// --- for continued blocking ---
 	var cleanText string
 	c := &repl.Config{"https://pokeapi.co/api/v2/location-area/", ""}
+	cache := pokecache.NewCache(time.Second * 5)
 	for {
 
 		fmt.Print("Pokedex > ")
