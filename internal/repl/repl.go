@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"github.com/ssd-81/pokedex-cli/internal/pokecache"
 )
 
 type Config struct {
 	Next     string
 	Previous string
+	Cache	 *pokecache.Cache
+
 }
 
 type CommandMap struct {
@@ -81,6 +84,23 @@ exit: Exit the Pokedex`)
 
 func MapCommand(c *Config) error {
 	// baseUrl := "https://pokeapi.co/api/v2/location-area/"
+	body, ok := c.Cache.Get(c.Next) // or prevCall for mapb
+	if !ok {
+		resp, err := http.Get(c.Next)
+		if err != nil {
+			return fmt.Errorf("Error: %w", err)
+		}
+		defer resp.Body.Close()
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("Error: %w", err)
+		}
+		c.Cache.Add(c.Next, body)
+	} else {
+		fmt.Println("(from cache!)")
+	}
+
+	// above is implementing caching 
 	resp, err := http.Get(c.Next)
 	if err != nil {
 		return fmt.Errorf("Error: ", err)
@@ -97,6 +117,7 @@ func MapCommand(c *Config) error {
 	}
 	c.Next = locations.Next
 	c.Previous = locations.Previous
+	c.Cache.Add()
 	for _, loc := range locations.Results {
 		fmt.Println(loc.Name)
 	}

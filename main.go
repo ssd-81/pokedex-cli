@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 	"github.com/ssd-81/pokedex-cli/internal/repl"
 	"github.com/ssd-81/pokedex-cli/internal/pokecache"
 )
