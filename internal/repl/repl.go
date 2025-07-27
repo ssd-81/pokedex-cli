@@ -13,8 +13,7 @@ import (
 type Config struct {
 	Next     string
 	Previous string
-	Cache	 *pokecache.Cache
-
+	Cache    *pokecache.Cache
 }
 
 type CommandMap struct {
@@ -82,77 +81,99 @@ exit: Exit the Pokedex`)
 	return nil
 }
 
+func printLocations(locations []Location) {
+	for _, location := range locations {
+		fmt.Println(location.Name)
+	}
+}
+
 func MapCommand(c *Config) error {
-	// baseUrl := "https://pokeapi.co/api/v2/location-area/"
-	body, ok := c.Cache.Get(c.Next) // or prevCall for mapb
+	body, ok := c.Cache.Get(c.Next)
 	if !ok {
 		resp, err := http.Get(c.Next)
 		if err != nil {
 			return fmt.Errorf("Error: %w", err)
 		}
 		defer resp.Body.Close()
-		body, err = io.ReadAll(resp.Body)
+		newBody, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return fmt.Errorf("Error: %w", err)
 		}
-		c.Cache.Add(c.Next, body)
+		c.Cache.Add(c.Next, newBody)
+		var locations ResultLocations
+		err = json.Unmarshal(newBody, &locations)
+		if err != nil {
+			return fmt.Errorf("Error:", err)
+		}
+		// for testing
+		fmt.Println("\n\n")
+		fmt.Println(c.Next)
+		fmt.Println(c.Previous)
+		fmt.Println("\n\n")
+		//
+		c.Next = locations.Next
+		c.Previous = locations.Previous
+		for _, loc := range locations.Results {
+			fmt.Println(loc.Name)
+		}
+		return nil
 	} else {
 		var locations ResultLocations
-		locations, success = c.Cache.Get(c.Next)
-		fmt.Println("(from cache!)")
+		err := json.Unmarshal(body, &locations)
+		c.Next = locations.Next
+		c.Previous = locations.Previous
+		fmt.Println("from cache!\n\n\n")
+		if err != nil {
+			return fmt.Errorf("error while retrieving data from cache %w", err)
+		}
+		printLocations(locations.Results)
+		return nil
 	}
-
-	// above is implementing caching 
-	// resp, err := http.Get(c.Next)
-	// if err != nil {
-	// 	return fmt.Errorf("Error: ", err)
-	// }
-	// defer resp.Body.Close()
-	// body, err := io.ReadAll(resp.Body)
-	// if err != nil {
-	// 	return fmt.Errorf("Error: ", err)
-	// }
-	// var locations ResultLocations
-	// err = json.Unmarshal(body, &locations)
-	// if err != nil {
-	// 	return fmt.Errorf("Error:", err)
-	// }
-	// c.Next = locations.Next
-	// c.Previous = locations.Previous
-	// c.Cache.Add()
-	// for _, loc := range locations.Results {
-	// 	fmt.Println(loc.Name)
-	// }
-	// return nil
-
 }
 
 func MapBCommand(c *Config) error {
-	var prevCall string
-	if c.Previous != "" {
-		prevCall = c.Previous
+	if c.Previous == "" {
+		return fmt.Errorf("you are on the first page")
+	}
+	body, ok := c.Cache.Get(c.Previous)
+	if !ok {
+		resp, err := http.Get(c.Previous)
+		if err != nil {
+			return fmt.Errorf("Error: %w", err)
+		}
+		defer resp.Body.Close()
+		newBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("Error: %w", err)
+		}
+		c.Cache.Add(c.Previous, newBody)
+		var locations ResultLocations
+		err = json.Unmarshal(newBody, &locations)
+		if err != nil {
+			return fmt.Errorf("Error:", err)
+		}
+		// for testing
+		fmt.Println("\n\n")
+		fmt.Println(c.Next)
+		fmt.Println(c.Previous)
+		fmt.Println("\n\n")
+		//
+		c.Next = locations.Next
+		c.Previous = locations.Previous
+		for _, loc := range locations.Results {
+			fmt.Println(loc.Name)
+		}
+		return nil
 	} else {
-		fmt.Println("you're on the first page")
-		return nil 
+		var locations ResultLocations
+		err := json.Unmarshal(body, &locations)
+		c.Next = locations.Next
+		c.Previous = locations.Previous
+		fmt.Println("from cache!\n\n\n")
+		if err != nil {
+			return fmt.Errorf("error while retrieving data from cache %w", err)
+		}
+		printLocations(locations.Results)
+		return nil
 	}
-	resp, err := http.Get(prevCall)
-	if err != nil {
-		return fmt.Errorf("Error: ", err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("Error: ", err)
-	}
-	var locations ResultLocations
-	err = json.Unmarshal(body, &locations)
-	if err != nil {
-		return fmt.Errorf("Error:", err)
-	}
-	c.Next = locations.Next
-	c.Previous = locations.Previous
-	for _, loc := range locations.Results {
-		fmt.Println(loc.Name)
-	}
-	return nil
 }

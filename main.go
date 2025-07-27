@@ -6,8 +6,9 @@ import (
 	"os"
 	"strings"
 	"time"
-	"github.com/ssd-81/pokedex-cli/internal/repl"
+
 	"github.com/ssd-81/pokedex-cli/internal/pokecache"
+	"github.com/ssd-81/pokedex-cli/internal/repl"
 )
 
 func main() {
@@ -15,10 +16,10 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	// --- for continued blocking ---
 	var cleanText string
-	c := &repl.Config{"https://pokeapi.co/api/v2/location-area/", ""}
-	cache := pokecache.NewCache(time.Second * 5)
-	for {
+	cache := pokecache.NewCache(time.Second * 50)
+	c := &repl.Config{"https://pokeapi.co/api/v2/location-area/", "", cache}
 
+	for {
 		fmt.Print("Pokedex > ")
 
 		if !scanner.Scan() {
