@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
 	"github.com/ssd-81/pokedex-cli/internal/pokecache"
 )
 
 type Config struct {
 	Next     string
 	Previous string
+	Argument string
 	Cache    *pokecache.Cache
 }
 
@@ -32,7 +34,19 @@ type Location struct {
 	Name string `json:"name"`
 }
 
-// correct this structure
+type Encounters struct {
+	Name              string    `json:"name"`
+	PokemonEncounters []Details `json:"pokemon_encounters"`
+}
+
+type Details struct {
+	Pokemon Pokemon `json:"pokemon"`
+}
+
+type Pokemon struct {
+	Name string `json:"name"`
+}
+
 var CliMap = map[string]CommandMap{
 	"exit": {
 		Name:        "exit",
@@ -53,6 +67,11 @@ var CliMap = map[string]CommandMap{
 		Name:        "mapb",
 		Description: "display previous 20 location areas in Pokemon world",
 		Callback:    MapBCommand,
+	},
+	"explore": {
+		Name:        "explore",
+		Description: "list of all the Pokemon located in an area",
+		Callback:    CommandExplore,
 	},
 }
 
@@ -103,14 +122,8 @@ func MapCommand(c *Config) error {
 		var locations ResultLocations
 		err = json.Unmarshal(newBody, &locations)
 		if err != nil {
-			return fmt.Errorf("Error:", err)
+			return fmt.Errorf("Error: %v", err)
 		}
-		// for testing
-		fmt.Println("\n\n")
-		fmt.Println(c.Next)
-		fmt.Println(c.Previous)
-		fmt.Println("\n\n")
-		//
 		c.Next = locations.Next
 		c.Previous = locations.Previous
 		for _, loc := range locations.Results {
@@ -122,7 +135,6 @@ func MapCommand(c *Config) error {
 		err := json.Unmarshal(body, &locations)
 		c.Next = locations.Next
 		c.Previous = locations.Previous
-		fmt.Println("from cache!\n\n\n")
 		if err != nil {
 			return fmt.Errorf("error while retrieving data from cache %w", err)
 		}
@@ -150,14 +162,8 @@ func MapBCommand(c *Config) error {
 		var locations ResultLocations
 		err = json.Unmarshal(newBody, &locations)
 		if err != nil {
-			return fmt.Errorf("Error:", err)
+			return fmt.Errorf("Error: %v	", err)
 		}
-		// for testing
-		fmt.Println("\n\n")
-		fmt.Println(c.Next)
-		fmt.Println(c.Previous)
-		fmt.Println("\n\n")
-		//
 		c.Next = locations.Next
 		c.Previous = locations.Previous
 		for _, loc := range locations.Results {
@@ -169,11 +175,46 @@ func MapBCommand(c *Config) error {
 		err := json.Unmarshal(body, &locations)
 		c.Next = locations.Next
 		c.Previous = locations.Previous
-		fmt.Println("from cache!\n\n\n")
+		fmt.Println("from cache!")
 		if err != nil {
 			return fmt.Errorf("error while retrieving data from cache %w", err)
 		}
 		printLocations(locations.Results)
 		return nil
 	}
+}
+
+func CommandExplore(c *Config) error {
+	// the most important part is extracting the location area from the user command
+	// how are we going to do that? think for some time.
+	// make request to this : https://pokeapi.co/api/v2/location-area/{id or name}/
+	// derive the pokemon from the response
+	// print the pokemons
+	baseUrl := "https://pokeapi.co/api/v2/location-area/"
+	if c.Argument != "" {
+		baseUrl += c.Argument
+	}
+	resp, err := http.Get(baseUrl)
+	if err != nil {
+		return fmt.Errorf("Error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("Error: %w", err)
+	}
+
+	// this is probably where we are messing up
+	var encounters Encounters
+	err = json.Unmarshal(body, &encounters)
+	if err != nil {
+		return fmt.Errorf("Error: %v", err)
+	}
+
+	for _, entry := range encounters.PokemonEncounters {
+		fmt.Println(entry.Pokemon.Name)
+	}
+
+	return nil
 }
