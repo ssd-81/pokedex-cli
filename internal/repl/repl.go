@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ssd-81/pokedex-cli/internal/pokecache"
 )
@@ -15,13 +17,14 @@ type Config struct {
 	Next     string
 	Previous string
 	Argument string
+	PokeDex  map[string]PokemonCatch
 	Cache    *pokecache.Cache
 }
 
 type CommandMap struct {
 	Name        string
 	Description string
-	Callback    func(c *Config) error
+	Callback    func(c *Config, args CommandArgs) error
 }
 
 type ResultLocations struct {
@@ -45,6 +48,18 @@ type Details struct {
 
 type Pokemon struct {
 	Name string `json:"name"`
+}
+
+type PokemonCatch struct {
+	Name           string `json:"name"`
+	BaseExperience int    `json:"base_experience"`
+	Height         int    `json:"height"`
+	Weight         int    `json:"weight"`
+}
+
+// struct for storing the arguments for passing to command callbacks
+type CommandArgs struct {
+	Args []string
 }
 
 var CliMap = map[string]CommandMap{
@@ -73,6 +88,16 @@ var CliMap = map[string]CommandMap{
 		Description: "list of all the Pokemon located in an area",
 		Callback:    CommandExplore,
 	},
+	"catch": {
+		Name:        "catch",
+		Description: "catch a pokemon by throwing a pokeball",
+		Callback:    CommandCatch,
+	},
+	"inspect": {
+		Name:        "inspect",
+		Description: "takes the name of a Pokemon and prints the name, height, weight, stats and type(s) of the Pokemon",
+		Callback:    CommandInspect,
+	},
 }
 
 func CleanInput(text string) []string {
@@ -84,14 +109,14 @@ func CleanInput(text string) []string {
 	return wordSlice
 }
 
-func CommandExit(c *Config) error {
+func CommandExit(c *Config, args CommandArgs) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 
 }
 
-func CommandHelp(c *Config) error {
+func CommandHelp(c *Config, args CommandArgs) error {
 	fmt.Println(`Welcome to the Pokedex!
 Usage:
 
@@ -106,23 +131,23 @@ func printLocations(locations []Location) {
 	}
 }
 
-func MapCommand(c *Config) error {
+func MapCommand(c *Config, args CommandArgs) error {
 	body, ok := c.Cache.Get(c.Next)
 	if !ok {
 		resp, err := http.Get(c.Next)
 		if err != nil {
-			return fmt.Errorf("Error: %w", err)
+			return fmt.Errorf("error: %w", err)
 		}
 		defer resp.Body.Close()
 		newBody, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Errorf("Error: %w", err)
+			return fmt.Errorf("error: %w", err)
 		}
 		c.Cache.Add(c.Next, newBody)
 		var locations ResultLocations
 		err = json.Unmarshal(newBody, &locations)
 		if err != nil {
-			return fmt.Errorf("Error: %v", err)
+			return fmt.Errorf("error: %v", err)
 		}
 		c.Next = locations.Next
 		c.Previous = locations.Previous
@@ -143,7 +168,7 @@ func MapCommand(c *Config) error {
 	}
 }
 
-func MapBCommand(c *Config) error {
+func MapBCommand(c *Config, args CommandArgs) error {
 	if c.Previous == "" {
 		return fmt.Errorf("you are on the first page")
 	}
@@ -151,18 +176,18 @@ func MapBCommand(c *Config) error {
 	if !ok {
 		resp, err := http.Get(c.Previous)
 		if err != nil {
-			return fmt.Errorf("Error: %w", err)
+			return fmt.Errorf("error: %w", err)
 		}
 		defer resp.Body.Close()
 		newBody, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Errorf("Error: %w", err)
+			return fmt.Errorf("error: %w", err)
 		}
 		c.Cache.Add(c.Previous, newBody)
 		var locations ResultLocations
 		err = json.Unmarshal(newBody, &locations)
 		if err != nil {
-			return fmt.Errorf("Error: %v	", err)
+			return fmt.Errorf("error: %v	", err)
 		}
 		c.Next = locations.Next
 		c.Previous = locations.Previous
@@ -184,37 +209,103 @@ func MapBCommand(c *Config) error {
 	}
 }
 
-func CommandExplore(c *Config) error {
-	// the most important part is extracting the location area from the user command
-	// how are we going to do that? think for some time.
-	// make request to this : https://pokeapi.co/api/v2/location-area/{id or name}/
-	// derive the pokemon from the response
-	// print the pokemons
+func CommandExplore(c *Config, args CommandArgs) error {
+
 	baseUrl := "https://pokeapi.co/api/v2/location-area/"
-	if c.Argument != "" {
-		baseUrl += c.Argument
+	if len(args.Args) != 0 {
+		baseUrl += args.Args[len(args.Args)-1] + "/"
 	}
-	resp, err := http.Get(baseUrl)
+	fmt.Println(baseUrl)
+	cachedBody, ok := c.Cache.Get(baseUrl)
+	if !ok {
+		resp, err := http.Get(baseUrl)
+		if err != nil {
+			return fmt.Errorf("error: %w", err)
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error: %w", err)
+		}
+		c.Cache.Add(baseUrl, body)
+		// this is probably where we are messing up
+		var encounters Encounters
+		err = json.Unmarshal(body, &encounters)
+		if err != nil {
+			return fmt.Errorf("error: %v", err)
+		}
+
+		for _, entry := range encounters.PokemonEncounters {
+			fmt.Println(entry.Pokemon.Name)
+		}
+
+		return nil
+	} else {
+		var encounters Encounters
+		err := json.Unmarshal(cachedBody, &encounters)
+		if err != nil {
+			return fmt.Errorf("error while retrieving data from cache %w", err)
+		}
+		for _, entry := range encounters.PokemonEncounters {
+			fmt.Println(entry.Pokemon.Name)
+		}
+	}
+	return nil
+}
+
+func CommandCatch(c *Config, args CommandArgs) error {
+	if len(args.Args) == 0 {
+		fmt.Println("usage: catch <pokemon name>")
+		return nil
+	}
+	fmt.Printf("Throwing a Pokeball at %v...\n", args.Args[0])
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	url := fmt.Sprintf("https://pokeapi.co/api/v2/pokemon/%s/", args.Args[0])
+	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Errorf("Error: %w", err)
+		return fmt.Errorf("error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("Error: %w", err)
+		return fmt.Errorf("error: %w", err)
 	}
 
-	// this is probably where we are messing up
-	var encounters Encounters
-	err = json.Unmarshal(body, &encounters)
+	var pokemonData PokemonCatch
+	err = json.Unmarshal(body, &pokemonData)
 	if err != nil {
-		return fmt.Errorf("Error: %v", err)
+		return fmt.Errorf("error: %v", err)
+	}
+	catchPower := r.Intn(1 + r.Intn(20))
+	if catchPower*60+100 > pokemonData.BaseExperience {
+		fmt.Printf("%s was caught...\n", pokemonData.Name)
+		c.PokeDex[pokemonData.Name] = pokemonData
+	} else {
+		fmt.Printf("%s escaped!\n", pokemonData.Name)
 	}
 
-	for _, entry := range encounters.PokemonEncounters {
-		fmt.Println(entry.Pokemon.Name)
-	}
+	fmt.Println(pokemonData.Name)
+	fmt.Println(pokemonData.BaseExperience)
 
 	return nil
+
+}
+
+func CommandInspect(c *Config, args CommandArgs) error {
+	if len(args.Args) == 0 {
+		return fmt.Errorf("command usage > inspect <pokemon_name>")
+	}
+	pokemonName := args.Args[0]
+	val, ok := c.PokeDex[pokemonName]
+	if ok {
+		fmt.Printf("Name: %s\nHeight: %d\nWeight: %d\nBaseExperience: %d\n", val.Name, val.Height, val.Weight, val.BaseExperience)
+
+		return nil
+	} else {
+		return fmt.Errorf("pokemon %q not found in the pokedex", pokemonName)
+	}
+
 }
