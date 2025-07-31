@@ -98,6 +98,11 @@ var CliMap = map[string]CommandMap{
 		Description: "takes the name of a Pokemon and prints the name, height, weight, stats and type(s) of the Pokemon",
 		Callback:    CommandInspect,
 	},
+	"pokedex": {
+		Name:        "pokedex",
+		Description: "show the list of all the caught pokemon",
+		Callback:    CommandPokedex,
+	},
 }
 
 func CleanInput(text string) []string {
@@ -287,9 +292,6 @@ func CommandCatch(c *Config, args CommandArgs) error {
 		fmt.Printf("%s escaped!\n", pokemonData.Name)
 	}
 
-	fmt.Println(pokemonData.Name)
-	fmt.Println(pokemonData.BaseExperience)
-
 	return nil
 
 }
@@ -308,4 +310,12 @@ func CommandInspect(c *Config, args CommandArgs) error {
 		return fmt.Errorf("pokemon %q not found in the pokedex", pokemonName)
 	}
 
+}
+
+func CommandPokedex(c *Config, args CommandArgs) error {
+	fmt.Println("Your Pokedex:")
+	for key, _ := range c.PokeDex {
+		fmt.Println(key)
+	}
+	return nil
 }
