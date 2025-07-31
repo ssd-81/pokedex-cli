@@ -126,7 +126,13 @@ func CommandHelp(c *Config, args CommandArgs) error {
 Usage:
 
 help: Displays a help message
-exit: Exit the Pokedex`)
+exit: Exit the Pokedex
+map: Display next 20 location areas in Pokemon world"
+mapb: Display previous 20 location areas in Pokemon world
+explore: List of all the Pokemon located in an area"
+catch: Catch a pokemon by throwing a pokeball
+inspect: Takes the name of a Pokemon and prints the name, height, weight, stats and type(s) of the Pokemon
+pokedex: Show the list of all the caught pokemon`)
 	return nil
 }
 
